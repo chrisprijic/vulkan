@@ -54,6 +54,18 @@ private:
         const char** extensions;
 
         extensions = glfwGetRequiredInstanceExtensions(&extensionCount);
+
+        // verify extension availability
+        uint32_t vExtensionCount = 0;
+        vkEnumerateInstanceExtensionProperties(nullptr, &vExtensionCount, nullptr);
+        std::vector<VkExtensionProperties> vExtensions(vExtensionCount);
+        vkEnumerateInstanceExtensionProperties(nullptr, &vExtensionCount, vExtensions.data());
+
+        std::cout << "Available Extensions: " << std::endl;
+        for (const auto& extension : vExtensions) {
+            std::cout << '\t' << extension.extensionName << std:: endl;
+        }
+
         createInfo.enabledExtensionCount = extensionCount;
         createInfo.ppEnabledExtensionNames = extensions;
 
@@ -62,6 +74,7 @@ private:
         VkResult result = vkCreateInstance(&createInfo, nullptr, &instance);
         if (result != VK_SUCCESS) {
             std::cout << "Error creating instance: " << result << std::endl;
+            throw std::runtime_error("error creating vulkan instance");
         }
     }
 
@@ -74,6 +87,8 @@ private:
     }
 
     void cleanup() {
+        vkDestroyInstance(instance, nullptr);
+
         glfwDestroyWindow(window);
 
         glfwTerminate();
