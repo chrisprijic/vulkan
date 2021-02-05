@@ -40,7 +40,7 @@ private:
         appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
         appInfo.pApplicationName = "Vulkan";
         appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
-        appInfo.pEngineName = "Chris Prijic";
+        appInfo.pEngineName = "Custom";
         appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
         appInfo.apiVersion = VK_API_VERSION_1_0;
 
@@ -55,6 +55,11 @@ private:
 
         extensions = glfwGetRequiredInstanceExtensions(&extensionCount);
 
+        std::cout << "Required Extensions" << std::endl;
+        for (int i = 0; i < extensionCount; ++i) {
+            std::cout << '\t' << extensions[i] << std::endl;
+        }
+
         // verify extension availability
         uint32_t vExtensionCount = 0;
         vkEnumerateInstanceExtensionProperties(nullptr, &vExtensionCount, nullptr);
@@ -64,6 +69,22 @@ private:
         std::cout << "Available Extensions: " << std::endl;
         for (const auto& extension : vExtensions) {
             std::cout << '\t' << extension.extensionName << std:: endl;
+        }
+
+        for (int i = 0; i < extensionCount; ++i) {
+            bool found = false;
+            auto requiredExtension = extensions[i];
+            for (const auto& extension : vExtensions) {
+                if (strcmp(extension.extensionName, requiredExtension)) {
+                    found = true;
+                    break;
+                }
+            }
+
+            if (!found) {
+                std::cout << "EXTENSION MISSING: " << requiredExtension << std::endl;
+                throw std::runtime_error("missing required instance extension");
+            }
         }
 
         createInfo.enabledExtensionCount = extensionCount;
