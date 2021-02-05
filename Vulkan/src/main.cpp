@@ -28,9 +28,57 @@ private:
         window = glfwCreateWindow(WIDTH, HEIGHT, "Vulkan", nullptr, nullptr);
     }
 
+    // VULKAN CODE
+    
     void initVulkan() {
-
+        createInstance();
     }
+
+    void createInstance() {
+        // APPLICATION INFO
+        VkApplicationInfo appInfo{};
+        appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
+        appInfo.pApplicationName = "Vulkan";
+        appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
+        appInfo.pEngineName = "Chris Prijic";
+        appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
+        appInfo.apiVersion = VK_API_VERSION_1_0;
+
+        // INSTANCE INFO
+        VkInstanceCreateInfo createInfo{};
+        createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+        createInfo.pApplicationInfo = &appInfo;
+
+        // INSTANCE EXTENSIONS
+        uint32_t extensionCount = 0;
+        const char** extensions;
+
+        extensions = glfwGetRequiredInstanceExtensions(&extensionCount);
+
+        // verify extension availability
+        uint32_t vExtensionCount = 0;
+        vkEnumerateInstanceExtensionProperties(nullptr, &vExtensionCount, nullptr);
+        std::vector<VkExtensionProperties> vExtensions(vExtensionCount);
+        vkEnumerateInstanceExtensionProperties(nullptr, &vExtensionCount, vExtensions.data());
+
+        std::cout << "Available Extensions: " << std::endl;
+        for (const auto& extension : vExtensions) {
+            std::cout << '\t' << extension.extensionName << std:: endl;
+        }
+
+        createInfo.enabledExtensionCount = extensionCount;
+        createInfo.ppEnabledExtensionNames = extensions;
+
+        createInfo.enabledLayerCount = 0;
+
+        VkResult result = vkCreateInstance(&createInfo, nullptr, &instance);
+        if (result != VK_SUCCESS) {
+            std::cout << "Error creating instance: " << result << std::endl;
+            throw std::runtime_error("error creating vulkan instance");
+        }
+    }
+
+    // MAIN APPLICATION CODE
 
     void mainLoop() {
         while (!glfwWindowShouldClose(window)) {
@@ -39,12 +87,17 @@ private:
     }
 
     void cleanup() {
+        vkDestroyInstance(instance, nullptr);
+
         glfwDestroyWindow(window);
 
         glfwTerminate();
     }
 
     GLFWwindow* window;
+
+    // VULKAN RESOURCES
+    VkInstance instance;
 };
 
 int main() {
