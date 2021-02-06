@@ -138,6 +138,9 @@ private:
             createInfo.enabledLayerCount = validationLayers.size();
             createInfo.ppEnabledLayerNames = validationLayers.data();
 
+            // We do this here so that we can debug instance creation/deletion.
+            // without this, we can debug everything EXCEPT the instance 
+            // creation/deletion.
             populateDebugMessengerCreateInfo(debugCreateInfo);
             createInfo.pNext = &debugCreateInfo;
         } else {
