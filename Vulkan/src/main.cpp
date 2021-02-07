@@ -16,6 +16,10 @@ const std::vector<const char*> validationLayers = {
     "VK_LAYER_KHRONOS_validation"
 };
 
+const std::vector<const char*> deviceExtensions = {
+    VK_KHR_SWAPCHAIN_EXTENSION_NAME
+};
+
 #ifdef NDEBUG
 const bool enableValidationLayers = false;
 #else
@@ -131,7 +135,7 @@ private:
             }
         }
 
-        createInfo.enabledExtensionCount = extensions.size();
+        createInfo.enabledExtensionCount = static_cast<uint32_t>(extensions.size());
         createInfo.ppEnabledExtensionNames = extensions.data();
 
         // check layer capabilities
@@ -141,7 +145,7 @@ private:
 
         VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo;
         if (enableValidationLayers) {
-            createInfo.enabledLayerCount = validationLayers.size();
+            createInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
             createInfo.ppEnabledLayerNames = validationLayers.data();
 
             // We do this here so that we can debug instance creation/deletion.
@@ -279,6 +283,32 @@ private:
         }
     }
 
+    bool checkDeviceExtensionSupport(VkPhysicalDevice device) {
+        uint32_t extensionCount;
+        vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, nullptr);
+
+        std::vector<VkExtensionProperties> availableExtensions(extensionCount);
+        vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, availableExtensions.data());
+
+        // validate required extensions available via device
+        for (const char* requiredExtension : deviceExtensions) {
+            bool found = false;
+
+            for (const auto& availableExtension : availableExtensions) {
+                if (strcmp(requiredExtension, availableExtension.extensionName) == 0) {
+                    found = true;
+                    break;
+                }
+            }
+
+            if (!found) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     bool isDeviceSuitable(VkPhysicalDevice device) {
         VkPhysicalDeviceProperties deviceProperties;
         vkGetPhysicalDeviceProperties(device, &deviceProperties);
@@ -290,11 +320,14 @@ private:
         // you can also rate and choose the most "suitable" one
         // you can even let the user choose which GPU to use
 
-        // for now, we'll just go with the first one with graphics functionality
+        // for now, we'll just go with the first one with the queues we want
+        // AND swapchain extension support
+
+        bool extensionsSupported = checkDeviceExtensionSupport(device);
 
         QueueFamilyIndices indices = findQueueFamilies(device);
 
-        return indices.isComplete();
+        return extensionsSupported && indices.isComplete();
     }
 
     QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device) {
@@ -352,13 +385,13 @@ private:
         VkDeviceCreateInfo createInfo{};
         createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
         createInfo.pQueueCreateInfos = queueCreateInfos.data();
-        createInfo.queueCreateInfoCount = queueCreateInfos.size();
+        createInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size());
         createInfo.pEnabledFeatures = &deviceFeatures;
 
         createInfo.enabledExtensionCount = 0;
 
         if (enableValidationLayers) {
-            createInfo.enabledLayerCount = validationLayers.size();
+            createInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
             createInfo.ppEnabledLayerNames = validationLayers.data();
         } else {
             createInfo.enabledLayerCount = 0;
@@ -402,7 +435,7 @@ private:
         glfwTerminate();
     }
 
-    GLFWwindow* window;
+    GLFWwindow* window = nullptr;
 
     // VULKAN RESOURCES
     VkInstance instance                     = VK_NULL_HANDLE;
