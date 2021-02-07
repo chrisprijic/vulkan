@@ -20,7 +20,7 @@ Process:
 [x] validation and debugging
 [x] physical devices and queues
 [x] logical devices and queues
-[ ] window surface
+[x] window surface and present queue
 [ ] swapchain
 [ ] image views
 [ ] shaders
