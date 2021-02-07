@@ -247,6 +247,14 @@ private:
         }
     }
 
+    void createSurface() {
+        VkResult result = glfwCreateWindowSurface(instance, window, nullptr, &surface);
+        if (result != VK_SUCCESS) {
+            std::cerr << "Error creating window surface: " << result << std::endl;
+            throw std::runtime_error("Error creating window surface.");
+        }
+    }
+
     void pickPhysicalDevice() {
         uint32_t deviceCount = 0;
         vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr);
@@ -354,6 +362,7 @@ private:
     void initVulkan() {
         createInstance();
         setupDebugMessenger();
+        createSurface();
         pickPhysicalDevice();
         createLogicalDevice();
     }
@@ -368,26 +377,25 @@ private:
 
     void cleanup() {
         vkDestroyDevice(device, nullptr); 
-        
+        vkDestroySurfaceKHR(instance, surface, nullptr);
         if (enableValidationLayers) {
             DestroyDebugUtilsMessengerEXT(instance, debugMessenger, nullptr);
         }
-
         vkDestroyInstance(instance, nullptr);
 
         glfwDestroyWindow(window);
-
         glfwTerminate();
     }
 
     GLFWwindow* window;
 
     // VULKAN RESOURCES
-    VkInstance instance = VK_NULL_HANDLE;
+    VkInstance instance                     = VK_NULL_HANDLE;
     VkDebugUtilsMessengerEXT debugMessenger = VK_NULL_HANDLE;
-    VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
-    VkDevice device = VK_NULL_HANDLE;
-    VkQueue graphicsQueue = VK_NULL_HANDLE;
+    VkSurfaceKHR surface                    = VK_NULL_HANDLE;
+    VkPhysicalDevice physicalDevice         = VK_NULL_HANDLE;
+    VkDevice device                         = VK_NULL_HANDLE;
+    VkQueue graphicsQueue                   = VK_NULL_HANDLE;
 };
 
 int main() {
