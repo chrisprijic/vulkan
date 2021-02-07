@@ -18,7 +18,7 @@ Process:
 [x] setup
 [x] instance
 [x] validation and debugging
-[ ] physical devices and queues
+[x] physical devices and queues
 [ ] logical devices and queues
 [ ] window surface
 [ ] swapchain
