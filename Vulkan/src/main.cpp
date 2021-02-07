@@ -278,7 +278,7 @@ private:
     void initVulkan() {
         createInstance();
         setupDebugMessenger();
-        //pickPhysicalDevice();
+        pickPhysicalDevice();
     }
 
     // MAIN APPLICATION CODE
