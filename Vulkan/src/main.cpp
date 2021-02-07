@@ -3,6 +3,7 @@
 #include <iostream>
 #include <stdexcept>
 #include <cstdlib>
+#include <optional>
 
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
@@ -42,11 +43,19 @@ void DestroyDebugUtilsMessengerEXT(
     const VkAllocationCallbacks* pAllocator) {
     auto func = (PFN_vkDestroyDebugUtilsMessengerEXT)
         vkGetInstanceProcAddr(instance,
-            "vkDestriyDebugUtilsMessengerEXT");
+            "vkDestroyDebugUtilsMessengerEXT");
     if (func != nullptr) {
         func(instance, debugMessenger, pAllocator);
     }
 }
+
+struct QueueFamilyIndices {
+    std::optional<uint32_t> graphicsFamily;
+
+    bool isComplete() {
+        return graphicsFamily.has_value();
+    }
+};
 
 class Application {
 public:
@@ -54,7 +63,7 @@ public:
         initWindow();
         initVulkan();
         mainLoop();
-cleanup();
+        cleanup();
     }
 private:
     void initWindow() {
@@ -67,11 +76,6 @@ private:
     }
 
     // VULKAN CODE
-
-    void initVulkan() {
-        createInstance();
-        setupDebugMessenger();
-    }
 
     void createInstance() {
         // APPLICATION INFO
@@ -243,6 +247,77 @@ private:
         }
     }
 
+    void pickPhysicalDevice() {
+        uint32_t deviceCount = 0;
+        vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr);
+        if (deviceCount == 0) {
+            throw std::runtime_error("failed to find GPU's with Vulkan support.");
+        }
+        
+        std::vector<VkPhysicalDevice> devices(deviceCount);
+        vkEnumeratePhysicalDevices(instance, &deviceCount, devices.data());
+
+        for (const auto& device : devices) {
+            if (isDeviceSuitable(device)) {
+                physicalDevice = device;
+                break;
+            }
+        }
+
+        if (physicalDevice == VK_NULL_HANDLE) {
+            throw std::runtime_error("failed to find suitable GPU.");
+        }
+    }
+
+    bool isDeviceSuitable(VkPhysicalDevice device) {
+        VkPhysicalDeviceProperties deviceProperties;
+        vkGetPhysicalDeviceProperties(device, &deviceProperties);
+
+        VkPhysicalDeviceFeatures deviceFeatures;
+        vkGetPhysicalDeviceFeatures(device, &deviceFeatures);
+
+        // you can check device properties and features here
+        // you can also rate and choose the most "suitable" one
+        // you can even let the user choose which GPU to use
+
+        // for now, we'll just go with the first one with graphics functionality
+
+        QueueFamilyIndices indices = findQueueFamilies(device);
+
+        return indices.isComplete();
+    }
+
+    QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device) {
+        QueueFamilyIndices indices;
+
+        uint32_t queueFamilyCount = 0;
+        vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, nullptr);
+
+        std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
+        vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, queueFamilies.data());
+
+        int i = 0;
+        for (const auto& queueFamily : queueFamilies) {
+            if (queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT) {
+                indices.graphicsFamily = i;
+            }
+
+            if (indices.isComplete()) {
+                break;
+            }
+            
+            i++;
+        }
+
+        return indices;
+    }
+
+    void initVulkan() {
+        createInstance();
+        setupDebugMessenger();
+        pickPhysicalDevice();
+    }
+
     // MAIN APPLICATION CODE
 
     void mainLoop() {
@@ -266,8 +341,9 @@ private:
     GLFWwindow* window;
 
     // VULKAN RESOURCES
-    VkInstance instance;
-    VkDebugUtilsMessengerEXT debugMessenger;
+    VkInstance instance = VK_NULL_HANDLE;
+    VkDebugUtilsMessengerEXT debugMessenger = VK_NULL_HANDLE;
+    VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
 };
 
 int main() {
