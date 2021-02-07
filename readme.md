@@ -12,3 +12,34 @@ I plan to use this to reach a point in:
 
 I am working on games/game rendering tech, and I want to have a solid understanding of Vulkan before I 
 try to abstract it's features.
+
+Process:
+
+[x] setup
+[x] instance
+[x] validation and debugging
+[ ] physical devices and queues
+[ ] logical devices and queues
+[ ] window surface
+[ ] swapchain
+[ ] image views
+[ ] shaders
+[ ] fixed functions
+[ ] render passes
+[ ] framebuffers
+[ ] command buffers
+[ ] rendering and presentation
+[ ] swapchain recreation
+[ ] vertex input
+[ ] vertex buffers
+[ ] staging buffers
+[ ] index buffers
+[ ] descriptor data
+[ ] descriptor management
+[ ] images
+[ ] image view & samplers
+[ ] combined image samplers
+[ ] depth buffering
+[ ] models
+[ ] mipmaps
+[ ] multisampling
