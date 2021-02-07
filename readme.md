@@ -19,7 +19,7 @@ Process:
 [x] instance
 [x] validation and debugging
 [x] physical devices and queues
-[ ] logical devices and queues
+[x] logical devices and queues
 [ ] window surface
 [ ] swapchain
 [ ] image views
