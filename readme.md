@@ -21,7 +21,7 @@ Process:
 [x] physical devices and queues
 [x] logical devices and queues
 [x] window surface and present queue
-[ ] swapchain
+[x] swapchain
 [ ] image views
 [ ] shaders
 [ ] fixed functions
