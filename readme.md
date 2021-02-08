@@ -22,7 +22,7 @@ Process:
 [x] logical devices and queues
 [x] window surface and present queue
 [x] swapchain
-[ ] image views
+[x] image views
 [ ] shaders
 [ ] fixed functions
 [ ] render passes
