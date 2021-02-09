@@ -25,7 +25,7 @@ Process:
 - [x] image views
 - [x] shaders
 - [x] fixed functions
-- [ ] render passes
+- [x] render passes
 - [ ] framebuffers
 - [ ] command buffers
 - [ ] rendering and presentation
