@@ -23,7 +23,7 @@ Process:
 [x] window surface and present queue
 [x] swapchain
 [x] image views
-[ ] shaders
+[x] shaders
 [ ] fixed functions
 [ ] render passes
 [ ] framebuffers
