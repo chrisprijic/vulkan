@@ -24,7 +24,7 @@ Process:
 [x] swapchain
 [x] image views
 [x] shaders
-[ ] fixed functions
+[x] fixed functions
 [ ] render passes
 [ ] framebuffers
 [ ] command buffers
