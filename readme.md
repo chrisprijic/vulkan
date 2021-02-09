@@ -15,31 +15,31 @@ try to abstract it's features.
 
 Process:
 
-[x] setup
-[x] instance
-[x] validation and debugging
-[x] physical devices and queues
-[x] logical devices and queues
-[x] window surface and present queue
-[x] swapchain
-[x] image views
-[x] shaders
-[x] fixed functions
-[ ] render passes
-[ ] framebuffers
-[ ] command buffers
-[ ] rendering and presentation
-[ ] swapchain recreation
-[ ] vertex input
-[ ] vertex buffers
-[ ] staging buffers
-[ ] index buffers
-[ ] descriptor data
-[ ] descriptor management
-[ ] images
-[ ] image view & samplers
-[ ] combined image samplers
-[ ] depth buffering
-[ ] models
-[ ] mipmaps
-[ ] multisampling
+- [x] setup
+- [x] instance
+- [x] validation and debugging
+- [x] physical devices and queues
+- [x] logical devices and queues
+- [x] window surface and present queue
+- [x] swapchain
+- [x] image views
+- [x] shaders
+- [x] fixed functions
+- [ ] render passes
+- [ ] framebuffers
+- [ ] command buffers
+- [ ] rendering and presentation
+- [ ] swapchain recreation
+- [ ] vertex input
+- [ ] vertex buffers
+- [ ] staging buffers
+- [ ] index buffers
+- [ ] descriptor data
+- [ ] descriptor management
+- [ ] images
+- [ ] image view & samplers
+- [ ] combined image samplers
+- [ ] depth buffering
+- [ ] models
+- [ ] mipmaps
+- [ ] multisampling
