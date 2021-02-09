@@ -26,6 +26,7 @@ Process:
 - [x] shaders
 - [x] fixed functions
 - [x] render passes
+- [x] finished graphics pipeline
 - [ ] framebuffers
 - [ ] command buffers
 - [ ] rendering and presentation
