@@ -775,6 +775,30 @@ private:
             throw std::runtime_error("error creating pipeline layout.");
         }
 
+        VkGraphicsPipelineCreateInfo pipelineInfo{};
+        pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+        pipelineInfo.stageCount = 2;
+        pipelineInfo.pStages = shaderStages;
+        pipelineInfo.pInputAssemblyState = &inputAssemblyInfo;
+        pipelineInfo.pVertexInputState = &vertexInputInfo;
+        pipelineInfo.pViewportState = &viewportInfo;
+        pipelineInfo.pRasterizationState = &rasterizerInfo;
+        pipelineInfo.pMultisampleState = &multisampleInfo;
+        pipelineInfo.pDepthStencilState = nullptr;
+        pipelineInfo.pColorBlendState = &colorBlendInfo;
+        pipelineInfo.pDynamicState = &dynStateInfo;
+        pipelineInfo.layout = pipelineLayout;
+        pipelineInfo.renderPass = renderPass;
+        pipelineInfo.subpass = 0;
+        pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
+        pipelineInfo.basePipelineIndex = -1;
+
+        err = vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &graphicsPipeline);
+        if (err != VK_SUCCESS) {
+            std::cerr << "Error creating graphics pipeline: " << err << std::endl;
+            throw std::runtime_error("error creating graphics pipeline.");
+        }
+
         vkDestroyShaderModule(device, fragShaderModule, nullptr);
         vkDestroyShaderModule(device, vertShaderModule, nullptr);
     }
@@ -800,14 +824,13 @@ private:
     }
 
     void cleanup() {
+        vkDestroyPipeline(device, graphicsPipeline, nullptr);
         vkDestroyPipelineLayout(device, pipelineLayout, nullptr);
-
         vkDestroyRenderPass(device, renderPass, nullptr);
 
         for (auto imageView : swapchainImageViews) {
             vkDestroyImageView(device, imageView, nullptr);
         }
-
         vkDestroySwapchainKHR(device, swapchain, nullptr);
         vkDestroyDevice(device, nullptr); 
         vkDestroySurfaceKHR(instance, surface, nullptr);
@@ -835,8 +858,9 @@ private:
     VkFormat swapchainImageFormat;
     VkExtent2D swapchainExtent;
     std::vector<VkImageView> swapchainImageViews;
-    VkRenderPass renderPass;
-    VkPipelineLayout pipelineLayout;
+    VkRenderPass renderPass = VK_NULL_HANDLE;
+    VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
+    VkPipeline graphicsPipeline = VK_NULL_HANDLE;
 };
 
 int main() {
