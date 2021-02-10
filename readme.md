@@ -33,7 +33,7 @@ Process:
 
 At this point, we've got a rendered triangle on the screen:
 
-[](./assets/triangle_2021-02-09.png)
+[triangle](/assets/triangle_2021-02-09.png)
 
 - [ ] swapchain recreation
 - [ ] vertex input
