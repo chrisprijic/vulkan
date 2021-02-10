@@ -27,7 +27,7 @@ Process:
 - [x] fixed functions
 - [x] render passes
 - [x] finished graphics pipeline
-- [ ] framebuffers
+- [x] framebuffers
 - [ ] command buffers
 - [ ] rendering and presentation
 - [ ] swapchain recreation
