@@ -803,6 +803,31 @@ private:
         vkDestroyShaderModule(device, vertShaderModule, nullptr);
     }
 
+    void createFramebuffers() {
+        swapchainFramebuffers.resize(swapchainImageViews.size());
+
+        for (size_t i = 0; i < swapchainImageViews.size(); i++) {
+            VkImageView attachments[] = {
+                swapchainImageViews[i]
+            };
+
+            VkFramebufferCreateInfo createInfo{};
+            createInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+            createInfo.renderPass = renderPass;
+            createInfo.attachmentCount = 1;
+            createInfo.pAttachments = attachments;
+            createInfo.width = swapchainExtent.width;
+            createInfo.height = swapchainExtent.height;
+            createInfo.layers = 1;
+
+            VkResult err = vkCreateFramebuffer(device, &createInfo, nullptr, &swapchainFramebuffers[i]);
+            if (err != VK_SUCCESS) {
+                std::cerr << "error creating framebuffer: " << err << std::endl;
+                throw std::runtime_error("Error creating framebuffer.");
+            }
+        }
+    }
+
     void initVulkan() {
         createInstance();
         setupDebugMessenger();
@@ -813,6 +838,7 @@ private:
         createImageViews();
         createRenderPass();
         createGraphicsPipeline();
+        createFramebuffers();
     }
 
     // MAIN APPLICATION CODE
@@ -824,6 +850,10 @@ private:
     }
 
     void cleanup() {
+        for (auto framebuffer : swapchainFramebuffers) {
+            vkDestroyFramebuffer(device, framebuffer, nullptr);
+        }
+
         vkDestroyPipeline(device, graphicsPipeline, nullptr);
         vkDestroyPipelineLayout(device, pipelineLayout, nullptr);
         vkDestroyRenderPass(device, renderPass, nullptr);
@@ -858,6 +888,7 @@ private:
     VkFormat swapchainImageFormat;
     VkExtent2D swapchainExtent;
     std::vector<VkImageView> swapchainImageViews;
+    std::vector<VkFramebuffer> swapchainFramebuffers;
     VkRenderPass renderPass = VK_NULL_HANDLE;
     VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
     VkPipeline graphicsPipeline = VK_NULL_HANDLE;
