@@ -28,7 +28,7 @@ Process:
 - [x] render passes
 - [x] finished graphics pipeline
 - [x] framebuffers
-- [ ] command buffers
+- [x] command buffers
 - [ ] rendering and presentation
 - [ ] swapchain recreation
 - [ ] vertex input
