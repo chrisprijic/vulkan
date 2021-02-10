@@ -31,7 +31,9 @@ Process:
 - [x] command buffers
 - [ ] rendering and presentation
 
-At this point, we've got a rendered triangle on the screen!
+At this point, we've got a rendered triangle on the screen:
+
+[](./assets/triangle_2021-02-09.png)
 
 - [ ] swapchain recreation
 - [ ] vertex input
