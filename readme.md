@@ -29,7 +29,7 @@ Process:
 - [x] finished graphics pipeline
 - [x] framebuffers
 - [x] command buffers
-- [ ] rendering and presentation
+- [x] rendering and presentation
 
 At this point, we've got a rendered triangle on the screen:
 
