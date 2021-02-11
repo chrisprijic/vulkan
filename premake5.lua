@@ -19,6 +19,7 @@ outputdir = "%{cfg.buildcfg}-%{cfg.system}-%{cfg.architecture}"
 -- Include dirs relative to root (solution)
 IncludeDir = {}
 IncludeDir["GLFW"] = "Vulkan/vendor/GLFW/include"
+IncludeDir["glm"] = "Vulkan/vendor/glm"
 IncludeDir["Vulkan"] = "$(VULKAN_SDK)/include"
 
 
@@ -54,6 +55,7 @@ project "Vulkan"
 	{
 		"%{prj.name}/src",
         "%{IncludeDir.GLFW}",
+        "%{IncludeDir.glm}",
         "%{IncludeDir.Vulkan}"
     }
 
