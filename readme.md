@@ -36,8 +36,8 @@ At this point, we've got a rendered triangle on the screen:
 ![triangle](/assets/triangle_2021-02-09.png)
 
 - [x] swapchain recreation
-- [ ] vertex input
-- [ ] vertex buffers
+- [x] vertex input
+- [x] vertex buffers
 - [ ] staging buffers
 - [ ] index buffers
 - [ ] descriptor data
