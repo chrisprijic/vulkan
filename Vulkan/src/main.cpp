@@ -108,9 +108,14 @@ struct Vertex {
 
 // interleaved vertices
 const std::vector<Vertex> vertices = {
-    {{ 0.0f, -0.5f}, {1.0f, 0.0f, 0.0f}},
-    {{ 0.5f,  0.5f}, {0.0f, 1.0f, 0.0f}},
+    {{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},    
+    {{ 0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}},
+    {{ 0.5f,  0.5f}, {0.0f, 0.0f, 1.0f}},
     {{-0.5f,  0.5f}, {1.0f, 1.0f, 1.0f}}
+};
+
+const std::vector<uint16_t> indices = {
+    0, 1, 2, 2, 3, 0
 };
 
 std::vector<char> readFile(const std::string& filename) {
@@ -977,17 +982,67 @@ private:
         vkBindBufferMemory(device, buffer, memory, 0);
     }
 
-    void copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size) {
-        VkCommandBufferBeginInfo beginInfo{};
-        beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-        beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-        vkBeginCommandBuffer(transferCommandBuffers[currentFrame], &beginInfo);
+    void createVertexBuffer() {
+        VkDeviceSize size = sizeof(vertices[0]) * vertices.size();
 
+        createBuffer(
+            size, 
+            VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+            stagingVertexBuffer,
+            stagingVertexBufferMemory);
+
+        void* data;
+        vkMapMemory(device, stagingVertexBufferMemory, 0, size, 0, &data);
+        memcpy(data, vertices.data(), (size_t) size);
+
+        createBuffer(
+            size,
+            VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+            vertexBuffer,
+            vertexBufferMemory);
+    }
+
+    void createIndexBuffer() {
+        VkDeviceSize size = sizeof(indices[0]) * indices.size();
+
+        createBuffer(
+            size,
+            VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+            stagingIndexBuffer,
+            stagingIndexBufferMemory);
+
+        void* data;
+        vkMapMemory(device, stagingIndexBufferMemory, 0, size, 0, &data);
+        memcpy(data, indices.data(), (size_t) size);
+
+        createBuffer(
+            size,
+            VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+            indexBuffer,
+            indexBufferMemory);
+    }
+
+    void copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size) {
         VkBufferCopy copyRegion{};
         copyRegion.srcOffset = 0;
         copyRegion.dstOffset = 0;
         copyRegion.size = size;
         vkCmdCopyBuffer(transferCommandBuffers[currentFrame], srcBuffer, dstBuffer, 1, &copyRegion);
+    }
+
+    void copyMeshData() {
+        VkCommandBufferBeginInfo beginInfo{};
+        beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+        vkBeginCommandBuffer(transferCommandBuffers[currentFrame], &beginInfo);
+
+        copyBuffer(stagingVertexBuffer, vertexBuffer, sizeof(vertices[0]) * vertices.size());
+        copyBuffer(stagingIndexBuffer, indexBuffer, sizeof(indices[0]) * indices.size());
+
         vkEndCommandBuffer(transferCommandBuffers[currentFrame]);
 
         VkSubmitInfo submitInfo{};
@@ -998,30 +1053,6 @@ private:
         vkQueueSubmit(transferQueue, 1, &submitInfo, VK_NULL_HANDLE);
         // for now, let's just block until it's done transferring
         vkQueueWaitIdle(transferQueue);
-    }
-
-    void createVertexBuffer() {
-        VkDeviceSize size = sizeof(vertices[0]) * vertices.size();
-
-        createBuffer(
-            size, 
-            VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-            stagingBuffer,
-            stagingBufferMemory);
-
-        void* data;
-        vkMapMemory(device, stagingBufferMemory, 0, size, 0, &data);
-        memcpy(data, vertices.data(), (size_t) size);
-
-        createBuffer(
-            size,
-            VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-            vertexBuffer,
-            vertexBufferMemory);
-
-        copyBuffer(stagingBuffer, vertexBuffer, size);
     }
 
     void createCommandBuffers() {
@@ -1093,8 +1124,10 @@ private:
             VkBuffer vertexBuffers[] = { vertexBuffer };
             VkDeviceSize offsets[] = { 0 };
             vkCmdBindVertexBuffers(commandBuffers[i], 0, 1, vertexBuffers, offsets);
+            vkCmdBindIndexBuffer(commandBuffers[i], indexBuffer, 0, VK_INDEX_TYPE_UINT16);
 
-            vkCmdDraw(commandBuffers[i], static_cast<uint32_t>(vertices.size()), 1, 0, 0);
+            //vkCmdDraw(commandBuffers[i], static_cast<uint32_t>(vertices.size()), 1, 0, 0);
+            vkCmdDrawIndexed(commandBuffers[i], static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
 
             vkCmdEndRenderPass(commandBuffers[i]);
 
@@ -1154,6 +1187,8 @@ private:
         createCommandPool();
         createCommandBuffers();
         createVertexBuffer();
+        createIndexBuffer();
+        copyMeshData();
         prepareCommandBuffers();
         createSyncObjects();
     }
@@ -1200,11 +1235,11 @@ private:
         vkWaitForFences(device, 1, &inFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
 
         uint32_t imageIndex;
-        VkResult result = vkAcquireNextImageKHR(device, swapchain, UINT64_MAX, imageAvailableSemaphores[currentFrame], VK_NULL_HANDLE, &imageIndex);
-        if (result == VK_ERROR_OUT_OF_DATE_KHR) {
+        VkResult err = vkAcquireNextImageKHR(device, swapchain, UINT64_MAX, imageAvailableSemaphores[currentFrame], VK_NULL_HANDLE, &imageIndex);
+        if (err == VK_ERROR_OUT_OF_DATE_KHR) {
             recreateSwapchain();
             return;
-        } else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
+        } else if (err != VK_SUCCESS && err != VK_SUBOPTIMAL_KHR) {
             throw std::runtime_error("error acquiring next image.");
         }
 
@@ -1237,7 +1272,7 @@ private:
 
         vkResetFences(device, 1, &inFlightFences[currentFrame]);
 
-        VkResult err = vkQueueSubmit(graphicsQueue, 1, &submitInfo, inFlightFences[currentFrame]);
+        err = vkQueueSubmit(graphicsQueue, 1, &submitInfo, inFlightFences[currentFrame]);
         if (err != VK_SUCCESS) {
             std::cerr << "Error submitting rendering commands: " << err << std::endl;
             throw std::runtime_error("error submitting rendering commands.");
@@ -1259,11 +1294,11 @@ private:
 
         presentInfo.pResults = nullptr;
         
-        result = vkQueuePresentKHR(presentQueue, &presentInfo);
-        if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || framebufferResized) {
+        err = vkQueuePresentKHR(presentQueue, &presentInfo);
+        if (err == VK_ERROR_OUT_OF_DATE_KHR || err == VK_SUBOPTIMAL_KHR || framebufferResized) {
             framebufferResized = false;
             recreateSwapchain();
-        } else if (result != VK_SUCCESS) {
+        } else if (err != VK_SUCCESS) {
             throw std::runtime_error("error presenting swapchain image.");
         }
 
@@ -1284,12 +1319,19 @@ private:
 
         cleanupSwapchain();
 
-        vkUnmapMemory(device, stagingBufferMemory);
-        vkDestroyBuffer(device, stagingBuffer, nullptr);
-        vkFreeMemory(device, stagingBufferMemory, nullptr);
+        vkUnmapMemory(device, stagingVertexBufferMemory);
+        vkDestroyBuffer(device, stagingVertexBuffer, nullptr);
+        vkFreeMemory(device, stagingVertexBufferMemory, nullptr);
 
         vkDestroyBuffer(device, vertexBuffer, nullptr);
         vkFreeMemory(device, vertexBufferMemory, nullptr);
+
+        vkUnmapMemory(device, stagingIndexBufferMemory);
+        vkDestroyBuffer(device, stagingIndexBuffer, nullptr);
+        vkFreeMemory(device, stagingIndexBufferMemory, nullptr);
+
+        vkDestroyBuffer(device, indexBuffer, nullptr);
+        vkFreeMemory(device, indexBufferMemory, nullptr);
 
         for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
             vkDestroySemaphore(device, renderFinishedSemaphores[i], nullptr);
@@ -1335,8 +1377,12 @@ private:
     VkCommandPool transferCommandPool;
     VkBuffer vertexBuffer;
     VkDeviceMemory vertexBufferMemory;
-    VkBuffer stagingBuffer;
-    VkDeviceMemory stagingBufferMemory;
+    VkBuffer stagingVertexBuffer;
+    VkDeviceMemory stagingVertexBufferMemory;
+    VkBuffer indexBuffer;
+    VkDeviceMemory indexBufferMemory;
+    VkBuffer stagingIndexBuffer;
+    VkDeviceMemory stagingIndexBufferMemory;
     std::vector<VkCommandBuffer> commandBuffers;
     std::vector<VkCommandBuffer> transferCommandBuffers;
     std::vector<VkSemaphore> imageAvailableSemaphores;
