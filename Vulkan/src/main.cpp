@@ -982,14 +982,6 @@ private:
         vkBindBufferMemory(device, buffer, memory, 0);
     }
 
-    void copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size) {
-        VkBufferCopy copyRegion{};
-        copyRegion.srcOffset = 0;
-        copyRegion.dstOffset = 0;
-        copyRegion.size = size;
-        vkCmdCopyBuffer(transferCommandBuffers[currentFrame], srcBuffer, dstBuffer, 1, &copyRegion);
-    }
-
     void createVertexBuffer() {
         VkDeviceSize size = sizeof(vertices[0]) * vertices.size();
 
@@ -1024,7 +1016,7 @@ private:
 
         void* data;
         vkMapMemory(device, stagingIndexBufferMemory, 0, size, 0, &data);
-        memcpy(data, vertices.data(), (size_t) size);
+        memcpy(data, indices.data(), (size_t) size);
 
         createBuffer(
             size,
@@ -1032,6 +1024,14 @@ private:
             VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
             indexBuffer,
             indexBufferMemory);
+    }
+
+    void copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size) {
+        VkBufferCopy copyRegion{};
+        copyRegion.srcOffset = 0;
+        copyRegion.dstOffset = 0;
+        copyRegion.size = size;
+        vkCmdCopyBuffer(transferCommandBuffers[currentFrame], srcBuffer, dstBuffer, 1, &copyRegion);
     }
 
     void copyMeshData() {
@@ -1124,8 +1124,10 @@ private:
             VkBuffer vertexBuffers[] = { vertexBuffer };
             VkDeviceSize offsets[] = { 0 };
             vkCmdBindVertexBuffers(commandBuffers[i], 0, 1, vertexBuffers, offsets);
+            vkCmdBindIndexBuffer(commandBuffers[i], indexBuffer, 0, VK_INDEX_TYPE_UINT16);
 
-            vkCmdDraw(commandBuffers[i], static_cast<uint32_t>(vertices.size()), 1, 0, 0);
+            //vkCmdDraw(commandBuffers[i], static_cast<uint32_t>(vertices.size()), 1, 0, 0);
+            vkCmdDrawIndexed(commandBuffers[i], static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
 
             vkCmdEndRenderPass(commandBuffers[i]);
 
@@ -1233,11 +1235,11 @@ private:
         vkWaitForFences(device, 1, &inFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
 
         uint32_t imageIndex;
-        VkResult result = vkAcquireNextImageKHR(device, swapchain, UINT64_MAX, imageAvailableSemaphores[currentFrame], VK_NULL_HANDLE, &imageIndex);
-        if (result == VK_ERROR_OUT_OF_DATE_KHR) {
+        VkResult err = vkAcquireNextImageKHR(device, swapchain, UINT64_MAX, imageAvailableSemaphores[currentFrame], VK_NULL_HANDLE, &imageIndex);
+        if (err == VK_ERROR_OUT_OF_DATE_KHR) {
             recreateSwapchain();
             return;
-        } else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
+        } else if (err != VK_SUCCESS && err != VK_SUBOPTIMAL_KHR) {
             throw std::runtime_error("error acquiring next image.");
         }
 
@@ -1270,7 +1272,7 @@ private:
 
         vkResetFences(device, 1, &inFlightFences[currentFrame]);
 
-        VkResult err = vkQueueSubmit(graphicsQueue, 1, &submitInfo, inFlightFences[currentFrame]);
+        err = vkQueueSubmit(graphicsQueue, 1, &submitInfo, inFlightFences[currentFrame]);
         if (err != VK_SUCCESS) {
             std::cerr << "Error submitting rendering commands: " << err << std::endl;
             throw std::runtime_error("error submitting rendering commands.");
@@ -1292,11 +1294,11 @@ private:
 
         presentInfo.pResults = nullptr;
         
-        result = vkQueuePresentKHR(presentQueue, &presentInfo);
-        if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || framebufferResized) {
+        err = vkQueuePresentKHR(presentQueue, &presentInfo);
+        if (err == VK_ERROR_OUT_OF_DATE_KHR || err == VK_SUBOPTIMAL_KHR || framebufferResized) {
             framebufferResized = false;
             recreateSwapchain();
-        } else if (result != VK_SUCCESS) {
+        } else if (err != VK_SUCCESS) {
             throw std::runtime_error("error presenting swapchain image.");
         }
 
