@@ -946,40 +946,82 @@ private:
         throw std::runtime_error("error finding suitable buffer memory type.");
     }
 
-    void createVertexBuffer() {
+    void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& memory) {
         VkBufferCreateInfo bufferInfo{};
         bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-        bufferInfo.size = sizeof(vertices[0]) * vertices.size();
-        bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+        bufferInfo.size = size;
+        bufferInfo.usage = usage;
         bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-        VkResult err = vkCreateBuffer(device, &bufferInfo, nullptr, &vertexBuffer);
+        VkResult err = vkCreateBuffer(device, &bufferInfo, nullptr, &buffer);
         if (err != VK_SUCCESS) {
-            std::cerr << "Error creating vertex buffer: " << err << std::endl;
-            throw std::runtime_error("error creating vertex buffer.");
+            std::cerr << "Error creating buffer: " << err << std::endl;
+            throw std::runtime_error("error creating buffer.");
         }
 
         // now let's get memory set up
         VkMemoryRequirements mem{};
-        vkGetBufferMemoryRequirements(device, vertexBuffer, &mem);
+        vkGetBufferMemoryRequirements(device, buffer, &mem);
 
         VkMemoryAllocateInfo allocInfo{};
         allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
         allocInfo.allocationSize = mem.size;
-        allocInfo.memoryTypeIndex = findMemoryType(mem.memoryTypeBits,
-            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+        allocInfo.memoryTypeIndex = findMemoryType(mem.memoryTypeBits, properties);
 
-        err = vkAllocateMemory(device, &allocInfo, nullptr, &vertexBufferMemory);
+        err = vkAllocateMemory(device, &allocInfo, nullptr, &memory);
         if (err != VK_SUCCESS) {
             std::cerr << "Error allocating vertex memory: " << err << std::endl;
             throw std::runtime_error("error allocating vertex memory");
         }
 
-        vkBindBufferMemory(device, vertexBuffer, vertexBufferMemory, 0);
+        vkBindBufferMemory(device, buffer, memory, 0);
+    }
+
+    void copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size) {
+        VkCommandBufferBeginInfo beginInfo{};
+        beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+        vkBeginCommandBuffer(transferCommandBuffers[currentFrame], &beginInfo);
+
+        VkBufferCopy copyRegion{};
+        copyRegion.srcOffset = 0;
+        copyRegion.dstOffset = 0;
+        copyRegion.size = size;
+        vkCmdCopyBuffer(transferCommandBuffers[currentFrame], srcBuffer, dstBuffer, 1, &copyRegion);
+        vkEndCommandBuffer(transferCommandBuffers[currentFrame]);
+
+        VkSubmitInfo submitInfo{};
+        submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        submitInfo.commandBufferCount = 1;
+        submitInfo.pCommandBuffers = &(transferCommandBuffers[currentFrame]);
+
+        vkQueueSubmit(transferQueue, 1, &submitInfo, VK_NULL_HANDLE);
+        // for now, let's just block until it's done transferring
+        vkQueueWaitIdle(transferQueue);
+    }
+
+    void createVertexBuffer() {
+        VkDeviceSize size = sizeof(vertices[0]) * vertices.size();
+
+        createBuffer(
+            size, 
+            VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+            stagingBuffer,
+            stagingBufferMemory);
 
         void* data;
-        vkMapMemory(device, vertexBufferMemory, 0, bufferInfo.size, 0, &data);
-        memcpy(data, vertices.data(), (size_t) bufferInfo.size);
+        vkMapMemory(device, stagingBufferMemory, 0, size, 0, &data);
+        memcpy(data, vertices.data(), (size_t) size);
+
+        createBuffer(
+            size,
+            VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+            vertexBuffer,
+            vertexBufferMemory);
+
+        copyBuffer(stagingBuffer, vertexBuffer, size);
     }
 
     void createCommandBuffers() {
@@ -1002,20 +1044,22 @@ private:
         transferAllocateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
         transferAllocateInfo.commandPool = transferCommandPool;
         transferAllocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-        transferAllocateInfo.commandBufferCount = (uint32_t) commandBuffers.size();
+        transferAllocateInfo.commandBufferCount = (uint32_t) transferCommandBuffers.size();
 
         err = vkAllocateCommandBuffers(device, &transferAllocateInfo, transferCommandBuffers.data());
         if (err != VK_SUCCESS) {
             std::cerr << "error allocating command buffers: " << err << std::endl;
             throw std::runtime_error("Error allocating command buffers.");
         }
+    }
 
+    void prepareCommandBuffers() {
         // for now, let's show we can use the command buffers
         for (size_t i = 0; i < commandBuffers.size(); i++) {
             VkCommandBufferBeginInfo beginInfo{};
             beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 
-            err = vkBeginCommandBuffer(commandBuffers[i], &beginInfo);
+            VkResult err = vkBeginCommandBuffer(commandBuffers[i], &beginInfo);
             if (err != VK_SUCCESS) {
                 std::cerr << "Error beginning command recording: " << err << std::endl;
                 throw std::runtime_error("failed to begin recording command buffer.");
@@ -1108,8 +1152,9 @@ private:
         createGraphicsPipeline();
         createFramebuffers();
         createCommandPool();
-        createVertexBuffer();
         createCommandBuffers();
+        createVertexBuffer();
+        prepareCommandBuffers();
         createSyncObjects();
     }
 
@@ -1239,7 +1284,10 @@ private:
 
         cleanupSwapchain();
 
-        vkUnmapMemory(device, vertexBufferMemory);
+        vkUnmapMemory(device, stagingBufferMemory);
+        vkDestroyBuffer(device, stagingBuffer, nullptr);
+        vkFreeMemory(device, stagingBufferMemory, nullptr);
+
         vkDestroyBuffer(device, vertexBuffer, nullptr);
         vkFreeMemory(device, vertexBufferMemory, nullptr);
 
@@ -1287,6 +1335,8 @@ private:
     VkCommandPool transferCommandPool;
     VkBuffer vertexBuffer;
     VkDeviceMemory vertexBufferMemory;
+    VkBuffer stagingBuffer;
+    VkDeviceMemory stagingBufferMemory;
     std::vector<VkCommandBuffer> commandBuffers;
     std::vector<VkCommandBuffer> transferCommandBuffers;
     std::vector<VkSemaphore> imageAvailableSemaphores;
