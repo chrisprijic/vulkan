@@ -63,9 +63,10 @@ void DestroyDebugUtilsMessengerEXT(
 struct QueueFamilyIndices {
     std::optional<uint32_t> graphicsFamily;
     std::optional<uint32_t> presentFamily;
+    std::optional<uint32_t> transferFamily;
 
     bool isComplete() {
-        return graphicsFamily.has_value() && presentFamily.has_value();
+        return graphicsFamily.has_value() && presentFamily.has_value() && transferFamily.has_value();
     }
 };
 
@@ -425,6 +426,10 @@ private:
                 indices.graphicsFamily = i;
             }
 
+            if (queueFamily.queueFlags & VK_QUEUE_TRANSFER_BIT && !(queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT)) {
+                indices.transferFamily = i;
+            }
+
             VkBool32 presentSupport = false;
             vkGetPhysicalDeviceSurfaceSupportKHR(device, i, surface, &presentSupport);
             if (presentSupport) {
@@ -438,6 +443,10 @@ private:
             i++;
         }
 
+        if (!indices.transferFamily.has_value()) {
+            indices.transferFamily = indices.graphicsFamily;
+        }
+
         return indices;
     }
 
@@ -446,13 +455,13 @@ private:
 
         // queue information -- reuse queues if need be
         std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
-        std::set<uint32_t> uniqueQueueFamilies = { indices.graphicsFamily.value(), indices.presentFamily.value() };
+        std::set<uint32_t> uniqueQueueFamilies = { indices.graphicsFamily.value(), indices.presentFamily.value(), indices.transferFamily.value() };
 
         float queuePriority = 1.0f;
         for (uint32_t queueFamily : uniqueQueueFamilies) {
             VkDeviceQueueCreateInfo queueCreateInfo{};
             queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-            queueCreateInfo.queueFamilyIndex = indices.graphicsFamily.value();
+            queueCreateInfo.queueFamilyIndex = queueFamily;
             queueCreateInfo.queueCount = 1;
             queueCreateInfo.pQueuePriorities = &queuePriority;
 
@@ -487,6 +496,7 @@ private:
 
         vkGetDeviceQueue(device, indices.graphicsFamily.value(), 0, &graphicsQueue);
         vkGetDeviceQueue(device, indices.presentFamily.value(), 0, &presentQueue);
+        vkGetDeviceQueue(device, indices.transferFamily.value(), 0, &transferQueue);
     }
 
     SwapchainSupportDetails querySwapchainSupport(VkPhysicalDevice device) {
@@ -581,15 +591,19 @@ private:
         createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
         QueueFamilyIndices indices = findQueueFamilies(physicalDevice);
-        uint32_t queueFamilyIndices[] = { indices.graphicsFamily.value(), indices.presentFamily.value() };
+        std::set<uint32_t> queueFamilyIndices = { indices.graphicsFamily.value(), indices.presentFamily.value(), indices.transferFamily.value() };
+        std::vector<uint32_t> uniqueIndices;
+        for (auto i : queueFamilyIndices) {
+            uniqueIndices.push_back(i);
+        }
 
-        if (indices.graphicsFamily != indices.presentFamily) {
+        if (queueFamilyIndices.size() > 1) {
             // here we use concurrent for ease-of-use (tutorial)
             // ownership and gaining performance by keeping exclusive
             // and transferring ownership can be handled at a later point
             createInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
-            createInfo.queueFamilyIndexCount = 2;
-            createInfo.pQueueFamilyIndices = queueFamilyIndices;
+            createInfo.queueFamilyIndexCount = uniqueIndices.size();
+            createInfo.pQueueFamilyIndices = uniqueIndices.data();
         } else {
             createInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
             createInfo.queueFamilyIndexCount = 0; // optional
@@ -904,6 +918,17 @@ private:
             std::cerr << "error creating command pool: " << err << std::endl;
             throw std::runtime_error("Error creating command pool.");
         }
+
+        VkCommandPoolCreateInfo transferCreateInfo{};
+        transferCreateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+        transferCreateInfo.queueFamilyIndex = queueFamilyIndices.transferFamily.value();
+        transferCreateInfo.flags = 0;
+
+        err = vkCreateCommandPool(device, &transferCreateInfo, nullptr, &transferCommandPool);
+        if (err != VK_SUCCESS) {
+            std::cerr << "error creating command pool: " << err << std::endl;
+            throw std::runtime_error("Error creating command pool.");
+        }
     }
 
     uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) {
@@ -921,44 +946,87 @@ private:
         throw std::runtime_error("error finding suitable buffer memory type.");
     }
 
-    void createVertexBuffer() {
+    void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& memory) {
         VkBufferCreateInfo bufferInfo{};
         bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-        bufferInfo.size = sizeof(vertices[0]) * vertices.size();
-        bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+        bufferInfo.size = size;
+        bufferInfo.usage = usage;
         bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-        VkResult err = vkCreateBuffer(device, &bufferInfo, nullptr, &vertexBuffer);
+        VkResult err = vkCreateBuffer(device, &bufferInfo, nullptr, &buffer);
         if (err != VK_SUCCESS) {
-            std::cerr << "Error creating vertex buffer: " << err << std::endl;
-            throw std::runtime_error("error creating vertex buffer.");
+            std::cerr << "Error creating buffer: " << err << std::endl;
+            throw std::runtime_error("error creating buffer.");
         }
 
         // now let's get memory set up
         VkMemoryRequirements mem{};
-        vkGetBufferMemoryRequirements(device, vertexBuffer, &mem);
+        vkGetBufferMemoryRequirements(device, buffer, &mem);
 
         VkMemoryAllocateInfo allocInfo{};
         allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
         allocInfo.allocationSize = mem.size;
-        allocInfo.memoryTypeIndex = findMemoryType(mem.memoryTypeBits,
-            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+        allocInfo.memoryTypeIndex = findMemoryType(mem.memoryTypeBits, properties);
 
-        err = vkAllocateMemory(device, &allocInfo, nullptr, &vertexBufferMemory);
+        err = vkAllocateMemory(device, &allocInfo, nullptr, &memory);
         if (err != VK_SUCCESS) {
             std::cerr << "Error allocating vertex memory: " << err << std::endl;
             throw std::runtime_error("error allocating vertex memory");
         }
 
-        vkBindBufferMemory(device, vertexBuffer, vertexBufferMemory, 0);
+        vkBindBufferMemory(device, buffer, memory, 0);
+    }
+
+    void copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size) {
+        VkCommandBufferBeginInfo beginInfo{};
+        beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+        vkBeginCommandBuffer(transferCommandBuffers[currentFrame], &beginInfo);
+
+        VkBufferCopy copyRegion{};
+        copyRegion.srcOffset = 0;
+        copyRegion.dstOffset = 0;
+        copyRegion.size = size;
+        vkCmdCopyBuffer(transferCommandBuffers[currentFrame], srcBuffer, dstBuffer, 1, &copyRegion);
+        vkEndCommandBuffer(transferCommandBuffers[currentFrame]);
+
+        VkSubmitInfo submitInfo{};
+        submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        submitInfo.commandBufferCount = 1;
+        submitInfo.pCommandBuffers = &(transferCommandBuffers[currentFrame]);
+
+        vkQueueSubmit(transferQueue, 1, &submitInfo, VK_NULL_HANDLE);
+        // for now, let's just block until it's done transferring
+        vkQueueWaitIdle(transferQueue);
+    }
+
+    void createVertexBuffer() {
+        VkDeviceSize size = sizeof(vertices[0]) * vertices.size();
+
+        createBuffer(
+            size, 
+            VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+            stagingBuffer,
+            stagingBufferMemory);
 
         void* data;
-        vkMapMemory(device, vertexBufferMemory, 0, bufferInfo.size, 0, &data);
-        memcpy(data, vertices.data(), (size_t) bufferInfo.size);
+        vkMapMemory(device, stagingBufferMemory, 0, size, 0, &data);
+        memcpy(data, vertices.data(), (size_t) size);
+
+        createBuffer(
+            size,
+            VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+            vertexBuffer,
+            vertexBufferMemory);
+
+        copyBuffer(stagingBuffer, vertexBuffer, size);
     }
 
     void createCommandBuffers() {
         commandBuffers.resize(swapchainImageViews.size());
+        transferCommandBuffers.resize(swapchainImageViews.size());
 
         VkCommandBufferAllocateInfo allocateInfo{};
         allocateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
@@ -972,12 +1040,26 @@ private:
             throw std::runtime_error("Error allocating command buffers.");
         }
 
+        VkCommandBufferAllocateInfo transferAllocateInfo{};
+        transferAllocateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+        transferAllocateInfo.commandPool = transferCommandPool;
+        transferAllocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+        transferAllocateInfo.commandBufferCount = (uint32_t) transferCommandBuffers.size();
+
+        err = vkAllocateCommandBuffers(device, &transferAllocateInfo, transferCommandBuffers.data());
+        if (err != VK_SUCCESS) {
+            std::cerr << "error allocating command buffers: " << err << std::endl;
+            throw std::runtime_error("Error allocating command buffers.");
+        }
+    }
+
+    void prepareCommandBuffers() {
         // for now, let's show we can use the command buffers
         for (size_t i = 0; i < commandBuffers.size(); i++) {
             VkCommandBufferBeginInfo beginInfo{};
             beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 
-            err = vkBeginCommandBuffer(commandBuffers[i], &beginInfo);
+            VkResult err = vkBeginCommandBuffer(commandBuffers[i], &beginInfo);
             if (err != VK_SUCCESS) {
                 std::cerr << "Error beginning command recording: " << err << std::endl;
                 throw std::runtime_error("failed to begin recording command buffer.");
@@ -1070,8 +1152,9 @@ private:
         createGraphicsPipeline();
         createFramebuffers();
         createCommandPool();
-        createVertexBuffer();
         createCommandBuffers();
+        createVertexBuffer();
+        prepareCommandBuffers();
         createSyncObjects();
     }
 
@@ -1101,6 +1184,7 @@ private:
         }
 
         vkFreeCommandBuffers(device, commandPool, static_cast<uint32_t>(commandBuffers.size()), commandBuffers.data());
+        vkFreeCommandBuffers(device, transferCommandPool, static_cast<uint32_t>(transferCommandBuffers.size()), transferCommandBuffers.data());
 
         vkDestroyPipeline(device, graphicsPipeline, nullptr);
         vkDestroyPipelineLayout(device, pipelineLayout, nullptr);
@@ -1200,7 +1284,10 @@ private:
 
         cleanupSwapchain();
 
-        vkUnmapMemory(device, vertexBufferMemory);
+        vkUnmapMemory(device, stagingBufferMemory);
+        vkDestroyBuffer(device, stagingBuffer, nullptr);
+        vkFreeMemory(device, stagingBufferMemory, nullptr);
+
         vkDestroyBuffer(device, vertexBuffer, nullptr);
         vkFreeMemory(device, vertexBufferMemory, nullptr);
 
@@ -1211,7 +1298,8 @@ private:
         }
 
         vkDestroyCommandPool(device, commandPool, nullptr);
-        
+        vkDestroyCommandPool(device, transferCommandPool, nullptr);
+
         vkDestroyDevice(device, nullptr); 
         vkDestroySurfaceKHR(instance, surface, nullptr);
         if (enableValidationLayers) {
@@ -1233,6 +1321,7 @@ private:
     VkDevice device                         = VK_NULL_HANDLE;
     VkQueue graphicsQueue                   = VK_NULL_HANDLE;
     VkQueue presentQueue                    = VK_NULL_HANDLE;
+    VkQueue transferQueue                   = VK_NULL_HANDLE;
     VkSwapchainKHR swapchain                = VK_NULL_HANDLE;
     std::vector<VkImage> swapchainImages    = {};
     VkFormat swapchainImageFormat;
@@ -1243,9 +1332,13 @@ private:
     VkPipeline graphicsPipeline = VK_NULL_HANDLE;
     std::vector<VkFramebuffer> swapchainFramebuffers;
     VkCommandPool commandPool;
+    VkCommandPool transferCommandPool;
     VkBuffer vertexBuffer;
     VkDeviceMemory vertexBufferMemory;
+    VkBuffer stagingBuffer;
+    VkDeviceMemory stagingBufferMemory;
     std::vector<VkCommandBuffer> commandBuffers;
+    std::vector<VkCommandBuffer> transferCommandBuffers;
     std::vector<VkSemaphore> imageAvailableSemaphores;
     std::vector<VkSemaphore> renderFinishedSemaphores;
     std::vector<VkFence> inFlightFences;
