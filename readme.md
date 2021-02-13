@@ -38,7 +38,7 @@ At this point, we've got a rendered triangle on the screen:
 - [x] swapchain recreation
 - [x] vertex input
 - [x] vertex buffers
-- [ ] staging buffers
+- [x] staging buffers
 - [ ] index buffers
 - [ ] descriptor data
 - [ ] descriptor management
