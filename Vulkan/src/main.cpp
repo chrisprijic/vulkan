@@ -410,6 +410,11 @@ private:
         VkPhysicalDeviceFeatures deviceFeatures;
         vkGetPhysicalDeviceFeatures(device, &deviceFeatures);
 
+        bool devicesFeaturesSupported = false;
+        if (deviceFeatures.samplerAnisotropy) {
+            devicesFeaturesSupported = true;
+        }
+
         // you can check device properties and features here
         // you can also rate and choose the most "suitable" one
         // you can even let the user choose which GPU to use
@@ -427,7 +432,7 @@ private:
             swapchainAdequate = !swapchainSupport.formats.empty() && !swapchainSupport.presentModes.empty();
         }
 
-        return extensionsSupported && swapchainAdequate && indices.isComplete();
+        return devicesFeaturesSupported && extensionsSupported && swapchainAdequate && indices.isComplete();
     }
 
     QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device) {
@@ -489,6 +494,7 @@ private:
 
         // for now we don't require anything special; so we can use empty structure
         VkPhysicalDeviceFeatures deviceFeatures{};
+        deviceFeatures.samplerAnisotropy = true;
 
         VkDeviceCreateInfo createInfo{};
         createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
@@ -1089,6 +1095,55 @@ private:
             textureImageMemory);
     }
 
+    void createTextureImageView() {
+        VkImageViewCreateInfo createInfo{};
+        createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+        createInfo.image = textureImage;
+        createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+        createInfo.format = VK_FORMAT_R8G8B8A8_SRGB;
+        createInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+        createInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+        createInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+        createInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+        createInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        createInfo.subresourceRange.baseMipLevel = 0;
+        createInfo.subresourceRange.levelCount = 1;
+        createInfo.subresourceRange.baseArrayLayer = 0;
+        createInfo.subresourceRange.layerCount = 1;
+
+        VkResult err = vkCreateImageView(device, &createInfo, nullptr, &textureImageView);
+        if (err != VK_SUCCESS) {
+            std::cerr << "error creating image view for texture: " << err << std::endl;
+            throw std::runtime_error("Error creating texture image view.");
+        }
+    }
+
+    void createTextureSampler() {
+        VkSamplerCreateInfo samplerInfo{};
+        samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+        samplerInfo.magFilter = VK_FILTER_LINEAR;
+        samplerInfo.minFilter = VK_FILTER_LINEAR;
+        samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+        samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+        samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+        samplerInfo.anisotropyEnable = VK_TRUE;
+        samplerInfo.maxAnisotropy = 16;
+        samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+        samplerInfo.unnormalizedCoordinates = VK_FALSE;
+        samplerInfo.compareEnable = VK_FALSE;
+        samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
+        samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+        samplerInfo.mipLodBias = 0.0f;
+        samplerInfo.minLod = 0.0f;
+        samplerInfo.maxLod = 0.0f;
+
+        VkResult err = vkCreateSampler(device, &samplerInfo, nullptr, &textureSampler);
+        if (err != VK_SUCCESS) {
+            std::cerr << "error creating sampler for texture: " << err << std::endl;
+            throw std::runtime_error("Error creating texture sampler.");
+        }
+    }
+
     void createVertexBuffer() {
         VkDeviceSize size = sizeof(vertices[0]) * vertices.size();
 
@@ -1449,6 +1504,8 @@ private:
         createCommandPool();
         createCommandBuffers();
         createTextureImage();
+        createTextureImageView();
+        createTextureSampler();
         createVertexBuffer();
         createIndexBuffer();
         createUniformBuffers();
@@ -1637,6 +1694,8 @@ private:
         vkDestroyBuffer(device, stagingTextureBuffer, nullptr);
         vkFreeMemory(device, stagingTextureBufferMemory, nullptr);
 
+        vkDestroySampler(device, textureSampler, nullptr);
+        vkDestroyImageView(device, textureImageView, nullptr);
         vkDestroyImage(device, textureImage, nullptr);
         vkFreeMemory(device, textureImageMemory, nullptr);
 
@@ -1689,6 +1748,8 @@ private:
     uint32_t textureHeight;
     VkImage textureImage;
     VkDeviceMemory textureImageMemory;
+    VkImageView textureImageView;
+    VkSampler textureSampler;
     VkBuffer vertexBuffer;
     VkDeviceMemory vertexBufferMemory;
     VkBuffer stagingVertexBuffer;
