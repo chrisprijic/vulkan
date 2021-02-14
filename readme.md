@@ -40,8 +40,8 @@ At this point, we've got a rendered triangle on the screen:
 - [x] vertex buffers
 - [x] staging buffers
 - [x] index buffers
-- [ ] descriptor data
-- [ ] descriptor management
+- [x] descriptor data
+- [x] descriptor management
 - [ ] images
 - [ ] image view & samplers
 - [ ] combined image samplers
