@@ -1845,7 +1845,28 @@ private:
     // MAIN APPLICATION CODE
 
     void mainLoop() {
+        double previousFrameCountTime = glfwGetTime();
+        double previousTime = glfwGetTime();
+        int frameCount = 0;
+
         while (!glfwWindowShouldClose(window)) {
+            double currentTime = glfwGetTime();
+            double frameTime = currentTime - previousTime;
+            previousTime = currentTime;
+
+            frameCount++;
+            // If a second has passed.
+            if (currentTime - previousFrameCountTime >= 1.0)
+            {
+                // Display the frame count here any way you want.
+                char formattedFrameTime[7];
+                std::sprintf(formattedFrameTime, "%07.3f", (frameTime * 1000));
+                std::cout << "FPS: " << frameCount << "  (" << formattedFrameTime << " ms)" << std::endl;
+
+                frameCount = 0;
+                previousFrameCountTime = currentTime;
+            }
+
             glfwPollEvents();
             drawFrame();
         }
