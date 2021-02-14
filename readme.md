@@ -42,9 +42,9 @@ At this point, we've got a rendered triangle on the screen:
 - [x] index buffers
 - [x] descriptor data
 - [x] descriptor management
-- [ ] images
-- [ ] image view & samplers
-- [ ] combined image samplers
+- [x] images
+- [x] image view & samplers
+- [x] combined image samplers
 - [ ] depth buffering
 - [ ] models
 - [ ] mipmaps
