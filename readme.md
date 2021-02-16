@@ -53,3 +53,17 @@ At this point, we've got a rendered triangle on the screen:
 Now we have mip-maps, meshes, and multisampling support:
 
 ![mesh_msaa_mipped](/assets/mesh_msaa_mipped_2021-02-15.png)
+
+Future Topics:
+
+- [ ] push constants
+- [ ] instanced rendering
+- [ ] dynamic uniforms
+- [ ] pipeline cache
+- [ ] allocator
+- [ ] multi-resource (texture, mesh, etc.)
+- [ ] multi-threaded
+- [ ] multiple subpasses
+- [ ] compute shaders
+- [ ] utils library (aggregate vkObjects into classes)
+- [ ] renderer (abstract vulkan from renderer interface)
