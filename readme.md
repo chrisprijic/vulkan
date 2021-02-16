@@ -47,5 +47,5 @@ At this point, we've got a rendered triangle on the screen:
 - [x] combined image samplers
 - [x] depth buffering
 - [x] models
-- [ ] mipmaps
+- [x] mipmaps
 - [ ] multisampling
