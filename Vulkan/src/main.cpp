@@ -27,7 +27,7 @@
 #define TINYOBJLOADER_IMPLEMENTATION
 #include "tiny_obj_loader.h"
 
-#include "utils/vulkan_instance.h"
+#include "utils/vulkan.h"
 
 const uint32_t WIDTH = 800;
 const uint32_t HEIGHT = 600;
@@ -157,14 +157,6 @@ private:
 
     // VULKAN CODE
 
-    void createSurface() {
-        VkResult result = glfwCreateWindowSurface(instance->vkInstance, window, nullptr, &surface);
-        if (result != VK_SUCCESS) {
-            std::cerr << "Error creating window surface: " << result << std::endl;
-            throw std::runtime_error("Error creating window surface.");
-        }
-    }
-
     VkSampleCountFlagBits getMaxUsableSampleCount() {
         VkPhysicalDeviceProperties properties;
         vkGetPhysicalDeviceProperties(physicalDevice, &properties);
@@ -293,7 +285,7 @@ private:
             }
 
             VkBool32 presentSupport = false;
-            vkGetPhysicalDeviceSurfaceSupportKHR(device, i, surface, &presentSupport);
+            vkGetPhysicalDeviceSurfaceSupportKHR(device, i, surface->vkSurface, &presentSupport);
             if (presentSupport) {
                 indices.presentFamily = i;
             }
@@ -372,25 +364,25 @@ private:
         // capabilities
         // - min/max swap chain size
         // - min/max width/height of images
-        vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, surface, &details.capabilities);
+        vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, surface->vkSurface, &details.capabilities);
 
         // formats
         // - pixel formats
         // - color spaces
         uint32_t formatCount = 0;
-        vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount, nullptr);
+        vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface->vkSurface, &formatCount, nullptr);
         if (formatCount != 0) {
             details.formats.resize(formatCount);
-            vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount, details.formats.data());
+            vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface->vkSurface, &formatCount, details.formats.data());
         }
 
         // present modes
         // - available "modes" of presentation
         uint32_t presentModeCount = 0;
-        vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &presentModeCount, nullptr);
+        vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface->vkSurface, &presentModeCount, nullptr);
         if (presentModeCount != 0) {
             details.presentModes.resize(presentModeCount);
-            vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &presentModeCount, details.presentModes.data());
+            vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface->vkSurface, &presentModeCount, details.presentModes.data());
         }
 
         return details;
@@ -449,7 +441,7 @@ private:
 
         VkSwapchainCreateInfoKHR createInfo{};
         createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-        createInfo.surface = surface;
+        createInfo.surface = surface->vkSurface;
         createInfo.minImageCount = imageCount;
         createInfo.imageFormat = surfaceFormat.format;
         createInfo.imageColorSpace = surfaceFormat.colorSpace;
@@ -1627,7 +1619,7 @@ private:
 
     void initVulkan() {
         instance = new utils::VulkanInstance();
-        createSurface();
+        surface = new utils::VulkanSurface(instance->vkInstance, window);
         pickPhysicalDevice();
         createLogicalDevice();
         createSwapchain();
@@ -1878,8 +1870,8 @@ private:
         vkDestroyCommandPool(device, transferCommandPool, nullptr);
 
         vkDestroyDevice(device, nullptr); 
-        vkDestroySurfaceKHR(instance->vkInstance, surface, nullptr);
         
+        delete surface;
         delete instance;
 
         glfwDestroyWindow(window);
@@ -1890,8 +1882,7 @@ private:
 
     // VULKAN RESOURCES
     utils::VulkanInstance* instance = nullptr;
-    VkDebugUtilsMessengerEXT debugMessenger = VK_NULL_HANDLE;
-    VkSurfaceKHR surface                    = VK_NULL_HANDLE;
+    utils::VulkanSurface* surface = nullptr;
     VkPhysicalDevice physicalDevice         = VK_NULL_HANDLE;
     VkDevice device                         = VK_NULL_HANDLE;
     VkQueue graphicsQueue                   = VK_NULL_HANDLE;
