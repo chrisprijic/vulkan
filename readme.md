@@ -48,4 +48,8 @@ At this point, we've got a rendered triangle on the screen:
 - [x] depth buffering
 - [x] models
 - [x] mipmaps
-- [ ] multisampling
+- [x] multisampling
+
+Now we have mip-maps, meshes, and multisampling support:
+
+![mesh_msaa_mipped](/assets/mesh_msaa_mipped_2021-02-15.png)
