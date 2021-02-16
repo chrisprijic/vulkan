@@ -87,9 +87,9 @@ struct QueueFamilyIndices {
 };
 
 struct SwapchainSupportDetails {
-    VkSurfaceCapabilitiesKHR capabilities;
-    std::vector<VkSurfaceFormatKHR> formats;
-    std::vector<VkPresentModeKHR> presentModes;
+    VkSurfaceCapabilitiesKHR capabilities{};
+    std::vector<VkSurfaceFormatKHR> formats{};
+    std::vector<VkPresentModeKHR> presentModes{};
 };
 
 struct Vertex {
@@ -1257,7 +1257,7 @@ private:
     void createTextureImage() {
         int texWidth, texHeight, texChannels;
         stbi_uc* pixels = stbi_load(TEXTURE_PATH.c_str(), &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
-        VkDeviceSize size = texWidth * texHeight * 4;
+        VkDeviceSize size = (int64_t)texWidth * (int64_t)texHeight * 4;
 
         if (!pixels) {
             throw std::runtime_error("failed to load texture image.");
@@ -1358,14 +1358,14 @@ private:
                 Vertex vertex{};
 
                 vertex.pos = {
-                    attrib.vertices[3 * index.vertex_index + 0],
-                    attrib.vertices[3 * index.vertex_index + 1],
-                    attrib.vertices[3 * index.vertex_index + 2]
+                    attrib.vertices[3 *(int64_t) index.vertex_index + 0],
+                    attrib.vertices[3 * (int64_t) index.vertex_index + 1],
+                    attrib.vertices[3 * (int64_t) index.vertex_index + 2]
                 };
 
                 vertex.texCoord = {
-                    attrib.texcoords[2 * index.texcoord_index + 0],
-                    1.0f - attrib.texcoords[2 * index.texcoord_index + 1]
+                    attrib.texcoords[2 * (int64_t) index.texcoord_index + 0],
+                    1.0f - attrib.texcoords[2 * (int64_t) index.texcoord_index + 1]
                 };
 
                 vertex.color = { 1.0f, 1.0f, 1.0f };
@@ -2103,52 +2103,52 @@ private:
     VkQueue presentQueue                    = VK_NULL_HANDLE;
     VkQueue transferQueue                   = VK_NULL_HANDLE;
     VkSwapchainKHR swapchain                = VK_NULL_HANDLE;
-    std::vector<VkImage> swapchainImages    = {};
-    VkFormat swapchainImageFormat;
-    VkExtent2D swapchainExtent;
-    std::vector<VkImageView> swapchainImageViews;
-    VkImage depthImage;
-    VkDeviceMemory depthImageMemory;
-    VkImageView depthImageView;
-    VkImage colorImage;
-    VkDeviceMemory colorImageMemory;
-    VkImageView colorImageView;
+    std::vector<VkImage> swapchainImages{};
+    VkFormat swapchainImageFormat = VK_FORMAT_UNDEFINED;
+    VkExtent2D swapchainExtent{};
+    std::vector<VkImageView> swapchainImageViews{};
+    VkImage depthImage = VK_NULL_HANDLE;
+    VkDeviceMemory depthImageMemory = VK_NULL_HANDLE;
+    VkImageView depthImageView = VK_NULL_HANDLE;
+    VkImage colorImage = VK_NULL_HANDLE;
+    VkDeviceMemory colorImageMemory = VK_NULL_HANDLE;
+    VkImageView colorImageView = VK_NULL_HANDLE;
     VkSampleCountFlagBits msaaSamples = VK_SAMPLE_COUNT_1_BIT;
     VkRenderPass renderPass = VK_NULL_HANDLE;
     VkDescriptorSetLayout descriptorSetLayout;
     VkPipelineLayout pipelineLayout;
     VkPipeline graphicsPipeline = VK_NULL_HANDLE;
-    std::vector<VkFramebuffer> swapchainFramebuffers;
-    VkCommandPool commandPool;
-    VkCommandPool transferCommandPool;
-    VkBuffer stagingTextureBuffer;
-    VkDeviceMemory stagingTextureBufferMemory;
+    std::vector<VkFramebuffer> swapchainFramebuffers{};
+    VkCommandPool commandPool = VK_NULL_HANDLE;
+    VkCommandPool transferCommandPool = VK_NULL_HANDLE;
+    VkBuffer stagingTextureBuffer = VK_NULL_HANDLE;
+    VkDeviceMemory stagingTextureBufferMemory = VK_NULL_HANDLE;
     uint32_t textureWidth;
     uint32_t textureHeight;
     uint32_t mipLevels;
-    VkImage textureImage;
-    VkDeviceMemory textureImageMemory;
-    VkImageView textureImageView;
-    VkSampler textureSampler;
-    std::vector<Vertex> vertices;
-    std::vector<uint32_t> indices;
-    VkBuffer vertexBuffer;
-    VkDeviceMemory vertexBufferMemory;
-    VkBuffer stagingVertexBuffer;
-    VkDeviceMemory stagingVertexBufferMemory;
-    VkBuffer indexBuffer;
-    VkDeviceMemory indexBufferMemory;
-    VkBuffer stagingIndexBuffer;
-    VkDeviceMemory stagingIndexBufferMemory;
-    std::vector<VkBuffer> uniformBuffers;
-    std::vector<VkDeviceMemory> uniformBufferMemory;
-    VkDescriptorPool descriptorPool;
-    std::vector<VkDescriptorSet> descriptorSets;
-    std::vector<VkCommandBuffer> commandBuffers;
-    std::vector<VkSemaphore> imageAvailableSemaphores;
-    std::vector<VkSemaphore> renderFinishedSemaphores;
-    std::vector<VkFence> inFlightFences;
-    std::vector<VkFence> imagesInFlight;
+    VkImage textureImage = VK_NULL_HANDLE;
+    VkDeviceMemory textureImageMemory = VK_NULL_HANDLE;
+    VkImageView textureImageView = VK_NULL_HANDLE;
+    VkSampler textureSampler = VK_NULL_HANDLE;
+    std::vector<Vertex> vertices{};
+    std::vector<uint32_t> indices{};
+    VkBuffer vertexBuffer = VK_NULL_HANDLE;
+    VkDeviceMemory vertexBufferMemory = VK_NULL_HANDLE;
+    VkBuffer stagingVertexBuffer = VK_NULL_HANDLE;
+    VkDeviceMemory stagingVertexBufferMemory = VK_NULL_HANDLE;
+    VkBuffer indexBuffer = VK_NULL_HANDLE;
+    VkDeviceMemory indexBufferMemory = VK_NULL_HANDLE;
+    VkBuffer stagingIndexBuffer = VK_NULL_HANDLE;
+    VkDeviceMemory stagingIndexBufferMemory = VK_NULL_HANDLE;
+    std::vector<VkBuffer> uniformBuffers{};
+    std::vector<VkDeviceMemory> uniformBufferMemory{};
+    VkDescriptorPool descriptorPool = VK_NULL_HANDLE;
+    std::vector<VkDescriptorSet> descriptorSets{};
+    std::vector<VkCommandBuffer> commandBuffers{};
+    std::vector<VkSemaphore> imageAvailableSemaphores{};
+    std::vector<VkSemaphore> renderFinishedSemaphores{};
+    std::vector<VkFence> inFlightFences{};
+    std::vector<VkFence> imagesInFlight{};
     size_t currentFrame = 0;
     bool framebufferResized = false;
 };
