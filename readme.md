@@ -56,7 +56,7 @@ Now we have mip-maps, meshes, and multisampling support:
 
 Future Topics:
 
-- [ ] push constants
+- [x] push constants
 - [ ] instanced rendering
 - [ ] dynamic uniforms
 - [ ] pipeline cache
