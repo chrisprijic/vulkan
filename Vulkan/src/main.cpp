@@ -1963,6 +1963,9 @@ private:
 
         updateUniformBuffers(imageIndex);
 
+        // render into command buffers
+        prepareCommands(imageIndex);
+
         VkSubmitInfo submitInfo{};
         submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
