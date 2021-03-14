@@ -1056,7 +1056,7 @@ private:
         VkCommandPoolCreateInfo createInfo{};
         createInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
         createInfo.queueFamilyIndex = queueFamilyIndices.graphicsFamily.value();
-        createInfo.flags = 0;
+        createInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
 
         VkResult err = vkCreateCommandPool(device, &createInfo, nullptr, &commandPool);
         if (err != VK_SUCCESS) {
@@ -1734,6 +1734,8 @@ private:
     }
 
     void prepareCommands(size_t i) {
+        vkResetCommandBuffer(commandBuffers[i], VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT);
+
         VkCommandBufferBeginInfo beginInfo{};
         beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 
